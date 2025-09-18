@@ -107,6 +107,7 @@ class GameFragment : Fragment() {
                 FallingObject.ObjectType.WISDOM -> {
                     character.increaseWisdom(10)
                     10
+
                 }
             }
 
