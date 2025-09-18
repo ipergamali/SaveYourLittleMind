@@ -4,7 +4,9 @@ import android.content.Context
 import android.util.Log
 import android.widget.ImageView
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -13,6 +15,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.bumptech.glide.Glide
 import ioannapergamali.savejoannepink.view.Character
 import kotlinx.coroutines.delay
+import kotlin.math.max
 import kotlin.random.Random
 @Composable
 fun FallingObjectsContainer(
@@ -26,22 +29,54 @@ fun FallingObjectsContainer(
     val context = LocalContext.current
 
     // State variables for the offsets
-    val offsetsX = remember { objects.map { mutableStateOf(it.offsetX) } }
-    val offsetsY = remember { objects.map { mutableStateOf(it.offsetY) } }
+    val offsetsX = remember(objects.size) {
+        mutableStateListOf<Float>().apply { repeat(objects.size) { add(0f) } }
+    }
+    val offsetsY = remember(objects.size) {
+        mutableStateListOf<Float>().apply { repeat(objects.size) { add(0f) } }
+    }
+
+    LaunchedEffect(objects.size) {
+        objects.forEachIndexed { index, obj ->
+            offsetsX[index] = generateNonOverlappingX(
+                currentIndex = index,
+                objects = objects,
+                offsetsX = offsetsX,
+                context = context,
+                screenWidth = screenWidth,
+                indicesToCheck = 0 until index
+            )
+            offsetsY[index] = -Random.nextInt(0, screenHeight / 2 + obj.getObjectHeight(context)).toFloat()
+            obj.offsetX = offsetsX[index]
+            obj.offsetY = offsetsY[index]
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
             objects.filter { !it.collected }.forEachIndexed { index, obj ->
                 // Update the vertical position of the object
-                offsetsY[index].value += 3f * density
-                if (offsetsY[index].value > screenHeight) {
-                    offsetsY[index].value = 0f
-                    offsetsX[index].value = Random.nextFloat() * (screenWidth - obj.getObjectWidth(context) / density)
+                offsetsY[index] = offsetsY[index] + 3f * density
+                if (offsetsY[index] > screenHeight) {
+                    offsetsY[index] = -Random.nextInt(0, screenHeight / 2 + obj.getObjectHeight(context)).toFloat()
+                    offsetsX[index] = generateNonOverlappingX(
+                        currentIndex = index,
+                        objects = objects,
+                        offsetsX = offsetsX,
+                        context = context,
+                        screenWidth = screenWidth,
+                        indicesToCheck = objects.indices.filter { it != index }
+                    )
                 }
+                obj.offsetX = offsetsX[index]
+                obj.offsetY = offsetsY[index]
                 // Check for collision with the character
-                if (checkCollision(context, character, obj, offsetsX[index].value, offsetsY[index].value)) {
-                    Log.d("Collision", "Collision detected with object: ${obj.name} at (${offsetsX[index].value}, ${offsetsY[index].value})")
-                    onCollision(obj, offsetsX[index].value, offsetsY[index].value)
+                if (checkCollision(context, character, obj, offsetsX[index], offsetsY[index])) {
+                    Log.d(
+                        "Collision",
+                        "Collision detected with object: ${obj.name} at (${offsetsX[index]}, ${offsetsY[index]})"
+                    )
+                    onCollision(obj, offsetsX[index], offsetsY[index])
                 }
             }
             delay(16) // Update every 16ms (roughly 60fps)
@@ -50,7 +85,7 @@ fun FallingObjectsContainer(
 
     Box(modifier = Modifier.fillMaxSize()) {
         objects.forEachIndexed { index, obj ->
-            Box(modifier = Modifier.offset(x = (offsetsX[index].value / density).dp, y = (offsetsY[index].value / density).dp)) {
+            Box(modifier = Modifier.offset(x = (offsetsX[index] / density).dp, y = (offsetsY[index] / density).dp)) {
                 val imageView = remember { ImageView(context) }
                 Glide.with(context)
                     .load(obj.imageResourceId)
@@ -65,6 +100,47 @@ fun FallingObjectsContainer(
             }
         }
     }
+}
+
+private fun generateNonOverlappingX(
+    currentIndex: Int,
+    objects: List<FallingObject>,
+    offsetsX: List<Float>,
+    context: Context,
+    screenWidth: Int,
+    indicesToCheck: Iterable<Int>
+): Float {
+    val objectWidth = objects[currentIndex].getObjectWidth(context)
+    val maxX = (screenWidth - objectWidth).coerceAtLeast(0)
+    val takenRanges = indicesToCheck.mapNotNull { otherIndex ->
+        val otherX = offsetsX.getOrNull(otherIndex) ?: return@mapNotNull null
+        val otherWidth = objects[otherIndex].getObjectWidth(context)
+        otherX to otherX + otherWidth
+    }.sortedBy { it.first }
+
+    if (takenRanges.isEmpty()) {
+        return Random.nextInt(0, maxX + 1).toFloat()
+    }
+
+    repeat(30) {
+        val candidateX = Random.nextInt(0, maxX + 1).toFloat()
+        val overlaps = takenRanges.any { range ->
+            candidateX < range.second && candidateX + objectWidth > range.first
+        }
+        if (!overlaps) {
+            return candidateX
+        }
+    }
+
+    var candidateX = 0f
+    takenRanges.forEach { range ->
+        if (candidateX + objectWidth <= range.first) {
+            return candidateX.coerceIn(0f, maxX.toFloat())
+        }
+        candidateX = max(candidateX, range.second)
+    }
+
+    return candidateX.coerceAtMost(maxX.toFloat())
 }
 
 fun checkCollision(
