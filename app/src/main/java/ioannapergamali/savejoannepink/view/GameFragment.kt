@@ -1,7 +1,6 @@
 package ioannapergamali.savejoannepink.view
 
 import android.content.Context
-import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.util.DisplayMetrics
@@ -25,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
-import ioannapergamali.savejoannepink.App
 import ioannapergamali.savejoannepink.R
 import ioannapergamali.savejoannepink.model.FallingObject
 import ioannapergamali.savejoannepink.model.FallingObjectsContainer
@@ -91,44 +89,33 @@ class GameFragment : Fragment() {
         var maxScore by remember { mutableStateOf(100) }
         var wisdom by remember { mutableStateOf(character.getWisdom()) }
 
-        fun handleCollision(obj: FallingObject, objOffsetX: Float, objOffsetY: Float) {
+        fun handleCollision(obj: FallingObject, _: Float, _: Float) {
             Log.d("Collision", "handleCollision called for object: ${obj.name}")
 
-            // Skip already collected objects
             if (obj.collected) {
+                Log.d("Collision", "Object already collected, skipping score update")
                 return
             }
 
-            val context = App.context
-            val characterBounds = character.getBounds()
-            val objectBounds = obj.getBounds(context)
+            obj.collected = true
 
-            Log.d("Collision", "Character bounds: $characterBounds")
-            Log.d("Collision", "Object bounds: $objectBounds")
-
-            if (Rect.intersects(characterBounds, objectBounds)) {
-                Log.d("Collision", "Collision detected with object: ${obj.name}")
-                when (obj.type) {
-                    FallingObject.ObjectType.DAMAGE -> {
-                        character.decreaseWisdom(10)
-                        score = (score - 10).coerceAtLeast(0)
-                    }
-                    FallingObject.ObjectType.WISDOM -> {
-                        character.increaseWisdom(10)
-                        score += 10
-                    }
+            val scoreDelta = when (obj.type) {
+                FallingObject.ObjectType.DAMAGE -> {
+                    character.decreaseWisdom(10)
+                    -10
                 }
-                if (score > maxScore) {
-                    maxScore = score
+                FallingObject.ObjectType.WISDOM -> {
+                    character.increaseWisdom(10)
+                    10
                 }
-                wisdom = character.getWisdom()
-                Log.d("Collision", "Score: $score, MaxScore: $maxScore, Wisdom: $wisdom")
-
-                // Mark the object as collected
-                obj.collected = true
-            } else {
-                Log.d("Collision", "No collision detected")
             }
+
+            score = (score + scoreDelta).coerceAtLeast(0)
+            if (score > maxScore) {
+                maxScore = score
+            }
+            wisdom = character.getWisdom()
+            Log.d("Collision", "Score: $score, MaxScore: $maxScore, Wisdom: $wisdom")
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
