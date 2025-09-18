@@ -108,16 +108,17 @@ class GameFragment : Fragment() {
 
             if (Rect.intersects(characterBounds, objectBounds)) {
                 Log.d("Collision", "Collision detected with object: ${obj.name}")
-                when (obj.type) {
+                val scoreDelta = when (obj.type) {
                     FallingObject.ObjectType.DAMAGE -> {
                         character.decreaseWisdom(10)
-                        score = (score - 10).coerceAtLeast(0)
+                        -10
                     }
                     FallingObject.ObjectType.WISDOM -> {
                         character.increaseWisdom(10)
-                        score += 10
+                        10
                     }
                 }
+                score = (score + scoreDelta).coerceAtLeast(0)
                 if (score > maxScore) {
                     maxScore = score
                 }
