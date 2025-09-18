@@ -1,0 +1,5 @@
+<!-- res/values/dimens.xml -->
+<resources>
+    <dimen name="object_width">50dp</dimen>
+    <dimen name="object_height">50dp</dimen>
+</resources>
