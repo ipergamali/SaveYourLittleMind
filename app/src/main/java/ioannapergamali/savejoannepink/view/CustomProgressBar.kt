@@ -1,4 +1,3 @@
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.runtime.Composable
@@ -15,8 +14,7 @@ fun CustomProgressBar(
         progress = progress,
         modifier = modifier
             .fillMaxWidth()
-            .height(8.dp)
-            .background(color = Color.Cyan) // Χρώμα φόντου της γραμμής προόδου
-
+            .height(8.dp),
+        backgroundColor = Color.Transparent
     )
 }
