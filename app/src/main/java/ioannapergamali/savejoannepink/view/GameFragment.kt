@@ -1,6 +1,5 @@
 package ioannapergamali.savejoannepink.view
 
-import CustomProgressBar
 import android.content.Context
 import android.graphics.Rect
 import android.os.Build
@@ -88,9 +87,9 @@ class GameFragment : Fragment() {
             height = displayMetrics.heightPixels
         }
 
-        var score by remember { mutableStateOf(0) }
+        var score by remember { mutableStateOf(100) }
+        var maxScore by remember { mutableStateOf(100) }
         var wisdom by remember { mutableStateOf(character.getWisdom()) }
-        var progress by remember { mutableStateOf(0f) }
 
         fun handleCollision(obj: FallingObject, objOffsetX: Float, objOffsetY: Float) {
             Log.d("Collision", "handleCollision called for object: ${obj.name}")
@@ -112,15 +111,18 @@ class GameFragment : Fragment() {
                 when (obj.type) {
                     FallingObject.ObjectType.DAMAGE -> {
                         character.decreaseWisdom(10)
+                        score = (score - 10).coerceAtLeast(0)
                     }
                     FallingObject.ObjectType.WISDOM -> {
                         character.increaseWisdom(10)
                         score += 10
                     }
                 }
+                if (score > maxScore) {
+                    maxScore = score
+                }
                 wisdom = character.getWisdom()
-                progress = wisdom / 100f
-                Log.d("Collision", "Score: $score, Wisdom: $wisdom")
+                Log.d("Collision", "Score: $score, MaxScore: $maxScore, Wisdom: $wisdom")
 
                 // Mark the object as collected
                 obj.collected = true
@@ -155,10 +157,11 @@ class GameFragment : Fragment() {
                 Text(text = "Score: $score", fontSize = 24.sp, color = Color.White)
                 Spacer(modifier = Modifier.height(16.dp))
                 CustomProgressBar(
-                    progress = progress,
+                    score = score,
+                    maxScore = maxScore,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(20.dp)
+                        .height(24.dp)
                 )
             }
         }
