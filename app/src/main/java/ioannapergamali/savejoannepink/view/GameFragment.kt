@@ -164,7 +164,7 @@ class GameFragment : Fragment() {
                             .fillMaxWidth()
                             .height(20.dp)
                     )
-                )
+                }
             }
         }
     }
