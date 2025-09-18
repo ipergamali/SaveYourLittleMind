@@ -13,9 +13,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ioannapergamali.savejoannepink.App
 import ioannapergamali.savejoannepink.viewModel.MainViewModel
 
 class Character(
@@ -28,10 +26,8 @@ class Character(
     var currentYPosition: Float = 0f
 
     fun getBounds(): Rect {
-        val context = App.context
-        val density = context.resources.displayMetrics.density
-        val width = (getCharacterWidth() / density).toInt()
-        val height = (getCharacterHeight() / density).toInt()
+        val width = getCharacterWidth()
+        val height = getCharacterHeight()
         val x = currentXPosition.toInt()
         val y = currentYPosition.toInt()
 
@@ -76,18 +72,23 @@ class Character(
 
 @Composable
 fun CharacterContainer(character: Character, screenWidth: Int, screenHeight: Int) {
-    val characterWidth = character.getCharacterWidth()
     val density = LocalDensity.current.density
+    val characterWidth = character.getCharacterWidth()
+    val characterHeight = character.getCharacterHeight()
+    val bottomPadding = 32.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
-        var initialOffsetX by remember { mutableStateOf(162f) }
-        var initialOffsetY by remember { mutableStateOf(565f) }
         var initialPositionSet by remember { mutableStateOf(false) }
 
-        LaunchedEffect(key1 = initialPositionSet) {
+        LaunchedEffect(key1 = initialPositionSet, screenWidth, screenHeight) {
             if (!initialPositionSet) {
-                character.offsetX = MainViewModel.dpToPx(dp = initialOffsetX.dp, density = density)
-                character.currentYPosition = MainViewModel.dpToPx(dp = initialOffsetY.dp, density = density)
+                val initialOffsetX = (screenWidth - characterWidth) / 2f
+                val bottomPaddingPx = MainViewModel.dpToPx(dp = bottomPadding, density = density)
+                val initialOffsetY = (screenHeight.toFloat() - characterHeight - bottomPaddingPx).coerceAtLeast(0f)
+
+                character.offsetX = initialOffsetX
+                character.currentXPosition = initialOffsetX
+                character.currentYPosition = initialOffsetY
                 initialPositionSet = true
             }
         }
