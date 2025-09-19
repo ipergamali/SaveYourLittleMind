@@ -55,32 +55,50 @@ fun FallingObjectsContainer(
 
     LaunchedEffect(Unit) {
         while (true) {
-            objects.filter { !it.collected }.forEachIndexed { index, obj ->
-                // Update the vertical position of the object
+            objects.forEachIndexed { index, obj ->
                 offsetsY[index] = offsetsY[index] + 3f * density
+
                 if (offsetsY[index] > screenHeight) {
-                    offsetsY[index] = -Random.nextInt(0, screenHeight / 2 + obj.getObjectHeight(context)).toFloat()
-                    offsetsX[index] = generateNonOverlappingX(
-                        currentIndex = index,
+                    resetObjectPosition(
+                        index = index,
+                        obj = obj,
                         objects = objects,
                         offsetsX = offsetsX,
+                        offsetsY = offsetsY,
                         context = context,
                         screenWidth = screenWidth,
-                        indicesToCheck = objects.indices.filter { it != index }
+                        screenHeight = screenHeight
                     )
+                    return@forEachIndexed
                 }
+
                 obj.offsetX = offsetsX[index]
                 obj.offsetY = offsetsY[index]
-                // Check for collision with the character
+
                 if (checkCollision(context, character, obj, offsetsX[index], offsetsY[index])) {
-                    Log.d(
-                        "Collision",
-                        "Collision detected with object: ${obj.name} at (${offsetsX[index]}, ${offsetsY[index]})"
-                    )
-                    onCollision(obj, offsetsX[index], offsetsY[index])
+                    if (!obj.collected) {
+                        obj.collected = true
+                        Log.d(
+                            "Collision",
+                            "Collision detected with object: ${obj.name} at (${offsetsX[index]}, ${offsetsY[index]})"
+                        )
+                        onCollision(obj, offsetsX[index], offsetsY[index])
+                        resetObjectPosition(
+                            index = index,
+                            obj = obj,
+                            objects = objects,
+                            offsetsX = offsetsX,
+                            offsetsY = offsetsY,
+                            context = context,
+                            screenWidth = screenWidth,
+                            screenHeight = screenHeight
+                        )
+                        obj.collected = false
+                    }
+                    return@forEachIndexed
                 }
             }
-            delay(16) // Update every 16ms (roughly 60fps)
+            delay(16)
         }
     }
 
@@ -182,4 +200,30 @@ fun initializeFallingObject(obj: FallingObject, initialX: Float, initialY: Float
     obj.offsetX = initialX
     obj.offsetY = initialY
     Log.d("FallingObject", "Initialized at X: $initialX, Y: $initialY")
+}
+
+private fun resetObjectPosition(
+    index: Int,
+    obj: FallingObject,
+    objects: List<FallingObject>,
+    offsetsX: MutableList<Float>,
+    offsetsY: MutableList<Float>,
+    context: Context,
+    screenWidth: Int,
+    screenHeight: Int
+) {
+    val newX = generateNonOverlappingX(
+        currentIndex = index,
+        objects = objects,
+        offsetsX = offsetsX,
+        context = context,
+        screenWidth = screenWidth,
+        indicesToCheck = objects.indices.filter { it != index }
+    )
+    val newY = -Random.nextInt(0, screenHeight / 2 + obj.getObjectHeight(context)).toFloat()
+
+    offsetsX[index] = newX
+    offsetsY[index] = newY
+    obj.offsetX = newX
+    obj.offsetY = newY
 }

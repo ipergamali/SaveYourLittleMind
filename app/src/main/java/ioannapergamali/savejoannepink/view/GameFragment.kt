@@ -91,14 +91,6 @@ class GameFragment : Fragment() {
 
         fun handleCollision(obj: FallingObject, offsetX: Float, offsetY: Float) {
             Log.d("Collision", "handleCollision called for object: ${obj.name} at (${offsetX}, ${offsetY})")
-
-            if (obj.collected) {
-                Log.d("Collision", "Object already collected, skipping score update")
-                return
-            }
-
-            obj.collected = true
-
             val scoreDelta = when (obj.type) {
                 FallingObject.ObjectType.DAMAGE -> {
                     character.decreaseWisdom(10)
@@ -107,7 +99,6 @@ class GameFragment : Fragment() {
                 FallingObject.ObjectType.WISDOM -> {
                     character.increaseWisdom(10)
                     10
-
                 }
             }
 
@@ -126,7 +117,7 @@ class GameFragment : Fragment() {
             )
 
             FallingObjectsContainer(
-                objects = fallingObjects.filter { !it.collected }, // Filter out collected objects here
+                objects = fallingObjects,
                 screenWidth = width,
                 screenHeight = height,
                 character = character,
