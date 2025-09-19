@@ -89,8 +89,8 @@ class GameFragment : Fragment() {
         var maxScore by remember { mutableStateOf(100) }
         var wisdom by remember { mutableStateOf(character.getWisdom()) }
 
-        fun handleCollision(obj: FallingObject, _: Float, _: Float) {
-            Log.d("Collision", "handleCollision called for object: ${obj.name}")
+        fun handleCollision(obj: FallingObject, offsetX: Float, offsetY: Float) {
+            Log.d("Collision", "handleCollision called for object: ${obj.name} at (${offsetX}, ${offsetY})")
 
             if (obj.collected) {
                 Log.d("Collision", "Object already collected, skipping score update")
@@ -130,7 +130,7 @@ class GameFragment : Fragment() {
                 screenWidth = width,
                 screenHeight = height,
                 character = character,
-                onCollision = { obj, objOffsetX, objOffsetY -> handleCollision(obj, objOffsetX, objOffsetY) }
+                onCollision = ::handleCollision
             )
 
             CharacterContainer(character, width, height)
