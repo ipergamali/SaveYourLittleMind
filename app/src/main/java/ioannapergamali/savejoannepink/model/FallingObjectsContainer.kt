@@ -2,22 +2,28 @@ package ioannapergamali.savejoannepink.model
 
 import android.content.Context
 import android.util.Log
-import android.widget.ImageView
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.bumptech.glide.Glide
 import ioannapergamali.savejoannepink.view.Character
 import kotlinx.coroutines.delay
 import kotlin.math.max
 import kotlin.random.Random
+
+private const val ROTATION_SPEED_DEGREES = 2f
 @Composable
 fun FallingObjectsContainer(
     objects: List<FallingObject>,
@@ -36,20 +42,24 @@ fun FallingObjectsContainer(
     val offsetsY = remember(objects.size) {
         mutableStateListOf<Float>().apply { repeat(objects.size) { add(0f) } }
     }
+    val rotationAngles = remember(objects.size) {
+        mutableStateListOf<Float>().apply { repeat(objects.size) { add(0f) } }
+    }
 
     LaunchedEffect(objects.size) {
         objects.forEachIndexed { index, obj ->
-            offsetsX[index] = generateNonOverlappingX(
-                currentIndex = index,
+            placeObject(
+                index = index,
+                obj = obj,
                 objects = objects,
                 offsetsX = offsetsX,
+                offsetsY = offsetsY,
+                rotationAngles = rotationAngles,
                 context = context,
                 screenWidth = screenWidth,
+                screenHeight = screenHeight,
                 indicesToCheck = 0 until index
             )
-            offsetsY[index] = -Random.nextInt(0, screenHeight / 2 + obj.getObjectHeight(context)).toFloat()
-            obj.offsetX = offsetsX[index]
-            obj.offsetY = offsetsY[index]
         }
     }
 
@@ -57,6 +67,7 @@ fun FallingObjectsContainer(
         while (true) {
             objects.forEachIndexed { index, obj ->
                 offsetsY[index] = offsetsY[index] + 3f * density
+                rotationAngles[index] = (rotationAngles[index] + ROTATION_SPEED_DEGREES) % 360f
 
                 if (offsetsY[index] > screenHeight) {
                     resetObjectPosition(
@@ -65,6 +76,7 @@ fun FallingObjectsContainer(
                         objects = objects,
                         offsetsX = offsetsX,
                         offsetsY = offsetsY,
+                        rotationAngles = rotationAngles,
                         context = context,
                         screenWidth = screenWidth,
                         screenHeight = screenHeight
@@ -89,6 +101,7 @@ fun FallingObjectsContainer(
                             objects = objects,
                             offsetsX = offsetsX,
                             offsetsY = offsetsY,
+                            rotationAngles = rotationAngles,
                             context = context,
                             screenWidth = screenWidth,
                             screenHeight = screenHeight
@@ -105,16 +118,13 @@ fun FallingObjectsContainer(
     Box(modifier = Modifier.fillMaxSize()) {
         objects.forEachIndexed { index, obj ->
             Box(modifier = Modifier.offset(x = (offsetsX[index] / density).dp, y = (offsetsY[index] / density).dp)) {
-                val imageView = remember { ImageView(context) }
-                Glide.with(context)
-                    .load(obj.imageResourceId)
-                    .into(imageView)
-
-                AndroidView(
-                    factory = { imageView },
+                Image(
+                    painter = painterResource(id = obj.imageResourceId),
+                    contentDescription = obj.name,
                     modifier = Modifier
                         .width((obj.getObjectWidth(context) / density).dp)
                         .height((obj.getObjectHeight(context) / density).dp)
+                        .graphicsLayer { rotationZ = rotationAngles[index] }
                 )
             }
         }
@@ -208,9 +218,36 @@ private fun resetObjectPosition(
     objects: List<FallingObject>,
     offsetsX: MutableList<Float>,
     offsetsY: MutableList<Float>,
+    rotationAngles: MutableList<Float>,
     context: Context,
     screenWidth: Int,
     screenHeight: Int
+) {
+    placeObject(
+        index = index,
+        obj = obj,
+        objects = objects,
+        offsetsX = offsetsX,
+        offsetsY = offsetsY,
+        rotationAngles = rotationAngles,
+        context = context,
+        screenWidth = screenWidth,
+        screenHeight = screenHeight,
+        indicesToCheck = objects.indices.filter { it != index }
+    )
+}
+
+private fun placeObject(
+    index: Int,
+    obj: FallingObject,
+    objects: List<FallingObject>,
+    offsetsX: MutableList<Float>,
+    offsetsY: MutableList<Float>,
+    rotationAngles: MutableList<Float>,
+    context: Context,
+    screenWidth: Int,
+    screenHeight: Int,
+    indicesToCheck: Iterable<Int>
 ) {
     val newX = generateNonOverlappingX(
         currentIndex = index,
@@ -218,12 +255,15 @@ private fun resetObjectPosition(
         offsetsX = offsetsX,
         context = context,
         screenWidth = screenWidth,
-        indicesToCheck = objects.indices.filter { it != index }
+        indicesToCheck = indicesToCheck
     )
-    val newY = -Random.nextInt(0, screenHeight / 2 + obj.getObjectHeight(context)).toFloat()
+    val objHeight = obj.getObjectHeight(context)
+    val maxOffset = (objHeight + screenHeight / 3).coerceAtLeast(objHeight + 1)
+    val newY = -Random.nextInt(objHeight, maxOffset).toFloat()
 
     offsetsX[index] = newX
     offsetsY[index] = newY
+    rotationAngles[index] = Random.nextFloat() * 360f
     obj.offsetX = newX
     obj.offsetY = newY
 }
