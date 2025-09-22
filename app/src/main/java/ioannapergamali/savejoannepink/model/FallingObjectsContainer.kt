@@ -180,7 +180,11 @@ fun checkCollision(
     objOffsetY: Float
 ): Boolean {
     val charX = character.offsetX
-    val charY = 520f // Fixed Y position of the character
+    val charY = character.currentYPosition
+
+    if (charY <= 0f) {
+        return false
+    }
     val charWidth = character.getCharacterWidth()
     val charHeight = character.getCharacterHeight()
     val objWidth = obj.getObjectWidth(context)
