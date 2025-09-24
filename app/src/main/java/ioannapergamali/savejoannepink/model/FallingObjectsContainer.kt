@@ -1,6 +1,7 @@
 package ioannapergamali.savejoannepink.model
 
 import android.content.Context
+import android.graphics.Rect
 import android.util.Log
 import android.widget.ImageView
 import androidx.compose.foundation.layout.*
@@ -67,7 +68,7 @@ fun FallingObjectsContainer(
                 obj.offsetX = offsetsX[index].value
                 obj.offsetY = offsetsY[index].value
 
-                if (checkCollision(context, character, obj, offsetsX[index].value, offsetsY[index].value)) {
+                if (checkCollision(context, character, obj)) {
                     Log.d(
                         "Collision",
                         "Collision detected with object: ${obj.name} at (${offsetsX[index].value}, ${offsetsY[index].value})"
@@ -101,33 +102,21 @@ fun FallingObjectsContainer(
 fun checkCollision(
     context: Context,
     character: Character,
-    obj: FallingObject,
-    objOffsetX: Float,
-    objOffsetY: Float
+    obj: FallingObject
 ): Boolean {
-    val charX = character.offsetX
-    val charY = 520f // Fixed Y position of the character
-    val charWidth = character.getCharacterWidth()
-    val charHeight = character.getCharacterHeight()
-    val objWidth = obj.getObjectWidth(context)
-    val objHeight = obj.getObjectHeight(context)
+    val characterBounds = character.getBounds()
+    val objectBounds = obj.getBounds(context)
 
-    Log.d("Collision", "Character bounds: left=$charX, right=${charX + charWidth}, top=$charY, bottom=${charY + charHeight}")
-    Log.d("Collision", "Object bounds: left=$objOffsetX, right=${objOffsetX + objWidth}, top=$objOffsetY, bottom=${objOffsetY + objHeight}")
+    Log.d(
+        "Collision",
+        "Character bounds: left=${characterBounds.left}, right=${characterBounds.right}, top=${characterBounds.top}, bottom=${characterBounds.bottom}"
+    )
+    Log.d(
+        "Collision",
+        "Object bounds: left=${objectBounds.left}, right=${objectBounds.right}, top=${objectBounds.top}, bottom=${objectBounds.bottom}"
+    )
 
-    // Calculate the boundaries of the character and the FallingObject
-    val charLeft = charX
-    val charRight = charX + charWidth
-    val charTop = charY
-    val charBottom = charY + charHeight
-
-    val objLeft = objOffsetX
-    val objRight = objOffsetX + objWidth
-    val objTop = objOffsetY
-    val objBottom = objOffsetY + objHeight
-
-    // Check for collision based on the boundaries
-    val collisionDetected = charLeft < objRight && charRight > objLeft && charTop < objBottom && charBottom > objTop
+    val collisionDetected = Rect.intersects(characterBounds, objectBounds)
     Log.d("Collision", "Collision detected: $collisionDetected")
     return collisionDetected
 }
