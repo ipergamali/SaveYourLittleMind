@@ -48,16 +48,6 @@ class GameFragment : Fragment() {
     @Composable
     fun GameContent() {
         val context = LocalContext.current
-        val imageView = remember { ImageView(context) }
-        Glide.with(context)
-            .asGif()
-            .load(R.drawable.game_background)
-            .into(imageView)
-
-        AndroidView(
-            factory = { imageView },
-            modifier = Modifier.fillMaxSize()
-        )
 
         val characterPainter = painterResource(id = R.drawable.character)
         val character = remember { Character("JoannaPink", 100, characterPainter) }
@@ -126,32 +116,51 @@ class GameFragment : Fragment() {
             }
         }
 
-        FallingObjectsContainer(
-            objects = fallingObjects.filter { !it.collected }, // Filter out collected objects here
-            screenWidth = width,
-            screenHeight = height,
-            character = character,
-            onCollision = { obj, objOffsetX, objOffsetY -> handleCollision(obj, objOffsetX, objOffsetY) }
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            AndroidView(
+                factory = { viewContext ->
+                    ImageView(viewContext).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                        Glide.with(viewContext)
+                            .asGif()
+                            .load(R.drawable.game_background)
+                            .into(this)
+                    }
+                },
+                modifier = Modifier.matchParentSize()
+            )
 
-        CharacterContainer(character, width, height)
+            FallingObjectsContainer(
+                objects = fallingObjects.filter { !it.collected }, // Filter out collected objects here
+                screenWidth = width,
+                screenHeight = height,
+                character = character,
+                onCollision = { obj, objOffsetX, objOffsetY -> handleCollision(obj, objOffsetX, objOffsetY) }
+            )
 
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            CharacterContainer(character, width, height)
+
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopCenter
             ) {
-                Text(text = "Score: $score", fontSize = 24.sp, color = Color.White)
-                Spacer(modifier = Modifier.height(16.dp))
-                CustomProgressBar(
-                    progress = progress,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                )
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "Score: $score", fontSize = 24.sp, color = Color.White)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CustomProgressBar(
+                        progress = progress,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(20.dp)
+                    )
+                }
             }
         }
     }
