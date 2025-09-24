@@ -103,11 +103,10 @@ class GameFragment : Fragment() {
             }
         }
 
-        fun handleCollision(obj: FallingObject, objOffsetX: Float, objOffsetY: Float) {
+        fun handleCollision(obj: FallingObject, _: Float, _: Float) {
             Log.d("Collision", "handleCollision called for object: ${obj.name}")
 
-            // Skip already collected objects
-            if (obj.collected || gameState != GameState.RUNNING) {
+            if (gameState != GameState.RUNNING) {
                 return
             }
 
@@ -131,9 +130,6 @@ class GameFragment : Fragment() {
                     }
                 }
                 Log.d("Collision", "Score: $score")
-
-                // Mark the object as collected
-                obj.collected = true
             } else {
                 Log.d("Collision", "No collision detected")
             }
@@ -159,7 +155,7 @@ class GameFragment : Fragment() {
 
             if (gameState == GameState.RUNNING) {
                 FallingObjectsContainer(
-                    objects = fallingObjects.filter { !it.collected }, // Filter out collected objects here
+                    objects = fallingObjects,
                     screenWidth = width,
                     screenHeight = height,
                     character = character,

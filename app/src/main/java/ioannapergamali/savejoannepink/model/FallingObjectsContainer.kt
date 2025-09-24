@@ -28,12 +28,18 @@ fun FallingObjectsContainer(
     val context = LocalContext.current
 
     // State variables for the offsets
-    val offsetsX = remember { objects.map { mutableStateOf(it.offsetX) } }
-    val offsetsY = remember { objects.map { mutableStateOf(it.offsetY) } }
+    val offsetsX = remember { mutableStateListOf<Float>() }
+    val offsetsY = remember { mutableStateListOf<Float>() }
 
     var positionsInitialized by remember { mutableStateOf(false) }
 
     LaunchedEffect(objects.size) {
+        offsetsX.clear()
+        offsetsY.clear()
+        repeat(objects.size) {
+            offsetsX.add(0f)
+            offsetsY.add(0f)
+        }
         positionsInitialized = false
     }
 
@@ -41,39 +47,55 @@ fun FallingObjectsContainer(
         while (true) {
             if (!positionsInitialized) {
                 val occupied = mutableListOf<Pair<Float, Float>>()
-                objects.filter { !it.collected }.forEachIndexed { index, obj ->
+                objects.forEachIndexed { index, obj ->
                     val width = obj.getObjectWidth(context).toFloat()
+                    val height = obj.getObjectHeight(context).toFloat()
                     val initialX = findAvailableX(screenWidth, width, occupied)
-                    offsetsX[index].value = initialX
+                    offsetsX[index] = initialX
+                    offsetsY[index] = -height
                     obj.offsetX = initialX
-                    obj.offsetY = offsetsY[index].value
+                    obj.offsetY = offsetsY[index]
+                    obj.collected = false
                     occupied.add(initialX to width)
                 }
                 positionsInitialized = true
             }
 
-            objects.filter { !it.collected }.forEachIndexed { index, obj ->
-                offsetsY[index].value += 3f * density
+            objects.forEachIndexed { index, obj ->
+                offsetsY[index] += 3f * density
+                obj.offsetX = offsetsX[index]
+                obj.offsetY = offsetsY[index]
 
-                if (offsetsY[index].value > screenHeight) {
-                    offsetsY[index].value = 0f
-                    val width = obj.getObjectWidth(context).toFloat()
-                    val others = offsetsX.indices
-                        .filter { it != index && it < objects.size }
-                        .map { offsetsX[it].value to objects[it].getObjectWidth(context).toFloat() }
-                    val newX = findAvailableX(screenWidth, width, others)
-                    offsetsX[index].value = newX
+                if (offsetsY[index] > screenHeight) {
+                    resetFallingObjectPosition(
+                        index = index,
+                        obj = obj,
+                        objects = objects,
+                        screenWidth = screenWidth,
+                        context = context,
+                        offsetsX = offsetsX,
+                        offsetsY = offsetsY
+                    )
+                    return@forEachIndexed
                 }
 
-                obj.offsetX = offsetsX[index].value
-                obj.offsetY = offsetsY[index].value
-
-                if (checkCollision(context, character, obj)) {
+                if (!obj.collected && checkCollision(context, character, obj)) {
                     Log.d(
                         "Collision",
-                        "Collision detected with object: ${obj.name} at (${offsetsX[index].value}, ${offsetsY[index].value})"
+                        "Collision detected with object: ${obj.name} at (${offsetsX[index]}, ${offsetsY[index]})"
                     )
-                    onCollision(obj, offsetsX[index].value, offsetsY[index].value)
+                    obj.collected = true
+                    onCollision(obj, offsetsX[index], offsetsY[index])
+                    resetFallingObjectPosition(
+                        index = index,
+                        obj = obj,
+                        objects = objects,
+                        screenWidth = screenWidth,
+                        context = context,
+                        offsetsX = offsetsX,
+                        offsetsY = offsetsY
+                    )
+                    obj.collected = false
                 }
             }
             delay(16) // Update every 16ms (roughly 60fps)
@@ -82,7 +104,12 @@ fun FallingObjectsContainer(
 
     Box(modifier = Modifier.fillMaxSize()) {
         objects.forEachIndexed { index, obj ->
-            Box(modifier = Modifier.offset(x = (offsetsX[index].value / density).dp, y = (offsetsY[index].value / density).dp)) {
+            Box(
+                modifier = Modifier.offset(
+                    x = (offsetsX[index] / density).dp,
+                    y = (offsetsY[index] / density).dp
+                )
+            ) {
                 val imageView = remember { ImageView(context) }
                 Glide.with(context)
                     .load(obj.imageResourceId)
@@ -97,6 +124,27 @@ fun FallingObjectsContainer(
             }
         }
     }
+}
+
+private fun resetFallingObjectPosition(
+    index: Int,
+    obj: FallingObject,
+    objects: List<FallingObject>,
+    screenWidth: Int,
+    context: Context,
+    offsetsX: MutableList<Float>,
+    offsetsY: MutableList<Float>
+) {
+    val width = obj.getObjectWidth(context).toFloat()
+    val height = obj.getObjectHeight(context).toFloat()
+    val others = offsetsX.indices
+        .filter { it != index && it < objects.size }
+        .map { offsetsX[it] to objects[it].getObjectWidth(context).toFloat() }
+    val newX = findAvailableX(screenWidth, width, others)
+    offsetsX[index] = newX
+    offsetsY[index] = -height
+    obj.offsetX = newX
+    obj.offsetY = offsetsY[index]
 }
 
 fun checkCollision(
