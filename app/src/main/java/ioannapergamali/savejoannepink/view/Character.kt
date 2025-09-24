@@ -81,7 +81,7 @@ fun CharacterContainer(character: Character, screenWidth: Int, screenHeight: Int
 
     Box(modifier = Modifier.fillMaxSize()) {
         var initialOffsetX by remember { mutableStateOf(162f) }
-        var initialOffsetY by remember { mutableStateOf(565f) }
+        var initialOffsetY by remember { mutableStateOf(625f) }
         var initialPositionSet by remember { mutableStateOf(false) }
 
         LaunchedEffect(key1 = initialPositionSet) {
