@@ -13,9 +13,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ioannapergamali.savejoannepink.App
 import ioannapergamali.savejoannepink.viewModel.MainViewModel
 
 class Character(
@@ -28,10 +26,8 @@ class Character(
     var currentYPosition: Float = 0f
 
     fun getBounds(): Rect {
-        val context = App.context
-        val density = context.resources.displayMetrics.density
-        val width = (getCharacterWidth() / density).toInt()
-        val height = (getCharacterHeight() / density).toInt()
+        val width = getCharacterWidth()
+        val height = getCharacterHeight()
         val x = currentXPosition.toInt()
         val y = currentYPosition.toInt()
 
@@ -47,6 +43,7 @@ class Character(
 
     fun move(dragAmountX: Float, screenWidth: Int, characterWidth: Int) {
         offsetX = (offsetX + dragAmountX).coerceIn(0f, screenWidth - characterWidth.toFloat())
+        currentXPosition = offsetX
     }
 
     fun getName(): String = name
@@ -87,6 +84,7 @@ fun CharacterContainer(character: Character, screenWidth: Int, screenHeight: Int
         LaunchedEffect(key1 = initialPositionSet) {
             if (!initialPositionSet) {
                 character.offsetX = MainViewModel.dpToPx(dp = initialOffsetX.dp, density = density)
+                character.currentXPosition = character.offsetX
                 character.currentYPosition = MainViewModel.dpToPx(dp = initialOffsetY.dp, density = density)
                 initialPositionSet = true
             }
@@ -100,7 +98,6 @@ fun CharacterContainer(character: Character, screenWidth: Int, screenHeight: Int
                     detectDragGestures { change, dragAmount ->
                         change.consume()
                         character.move(dragAmount.x * density, screenWidth, characterWidth)
-                        character.currentXPosition = character.offsetX
                     }
                 }
             )
