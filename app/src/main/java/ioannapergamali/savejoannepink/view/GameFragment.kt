@@ -31,6 +31,12 @@ import ioannapergamali.savejoannepink.R
 import ioannapergamali.savejoannepink.model.FallingObject
 import ioannapergamali.savejoannepink.model.FallingObjectsContainer
 
+private enum class GameState {
+    RUNNING,
+    WON,
+    LOST
+}
+
 class GameFragment : Fragment() {
 
     override fun onCreateView(
@@ -75,15 +81,33 @@ class GameFragment : Fragment() {
             height = displayMetrics.heightPixels
         }
 
-        var score by remember { mutableStateOf(0) }
-        var wisdom by remember { mutableStateOf(character.getWisdom()) }
-        var progress by remember { mutableStateOf(0f) }
+        var score by remember { mutableStateOf(30) }
+        var gameState by remember { mutableStateOf(GameState.RUNNING) }
+
+        fun adjustScore(delta: Int) {
+            if (gameState != GameState.RUNNING) {
+                return
+            }
+
+            score = (score + delta).coerceIn(0, 100)
+
+            when {
+                score >= 100 -> {
+                    gameState = GameState.WON
+                    Log.d("GameState", "Player won with score: $score")
+                }
+                score <= 0 -> {
+                    gameState = GameState.LOST
+                    Log.d("GameState", "Player lost with score: $score")
+                }
+            }
+        }
 
         fun handleCollision(obj: FallingObject, objOffsetX: Float, objOffsetY: Float) {
             Log.d("Collision", "handleCollision called for object: ${obj.name}")
 
             // Skip already collected objects
-            if (obj.collected) {
+            if (obj.collected || gameState != GameState.RUNNING) {
                 return
             }
 
@@ -99,15 +123,14 @@ class GameFragment : Fragment() {
                 when (obj.type) {
                     FallingObject.ObjectType.DAMAGE -> {
                         character.decreaseWisdom(10)
+                        adjustScore(-10)
                     }
                     FallingObject.ObjectType.WISDOM -> {
                         character.increaseWisdom(10)
-                        score += 10
+                        adjustScore(10)
                     }
                 }
-                wisdom = character.getWisdom()
-                progress = wisdom / 100f
-                Log.d("Collision", "Score: $score, Wisdom: $wisdom")
+                Log.d("Collision", "Score: $score")
 
                 // Mark the object as collected
                 obj.collected = true
@@ -134,13 +157,15 @@ class GameFragment : Fragment() {
                 modifier = Modifier.matchParentSize()
             )
 
-            FallingObjectsContainer(
-                objects = fallingObjects.filter { !it.collected }, // Filter out collected objects here
-                screenWidth = width,
-                screenHeight = height,
-                character = character,
-                onCollision = { obj, objOffsetX, objOffsetY -> handleCollision(obj, objOffsetX, objOffsetY) }
-            )
+            if (gameState == GameState.RUNNING) {
+                FallingObjectsContainer(
+                    objects = fallingObjects.filter { !it.collected }, // Filter out collected objects here
+                    screenWidth = width,
+                    screenHeight = height,
+                    character = character,
+                    onCollision = { obj, objOffsetX, objOffsetY -> handleCollision(obj, objOffsetX, objOffsetY) }
+                )
+            }
 
             CharacterContainer(character, width, height)
 
@@ -155,11 +180,31 @@ class GameFragment : Fragment() {
                     Text(text = "Score: $score", fontSize = 24.sp, color = Color.White)
                     Spacer(modifier = Modifier.height(16.dp))
                     CustomProgressBar(
-                        progress = progress,
+                        progress = score / 100f,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(20.dp)
                     )
+                }
+            }
+
+            if (gameState != GameState.RUNNING) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val resultText = when (gameState) {
+                            GameState.WON -> "win"
+                            GameState.LOST -> "lose"
+                            else -> ""
+                        }
+                        if (resultText.isNotEmpty()) {
+                            Text(text = resultText, fontSize = 48.sp, color = Color.White)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        Text(text = "game over", fontSize = 32.sp, color = Color.White)
+                    }
                 }
             }
         }
