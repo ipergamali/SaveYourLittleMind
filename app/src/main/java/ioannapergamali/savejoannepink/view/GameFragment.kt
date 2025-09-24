@@ -103,8 +103,11 @@ class GameFragment : Fragment() {
             }
         }
 
-        fun handleCollision(obj: FallingObject, _: Float, _: Float) {
-            Log.d("Collision", "handleCollision called for object: ${obj.name}")
+        fun handleCollision(obj: FallingObject, offsetX: Float, offsetY: Float) {
+            Log.d(
+                "Collision",
+                "handleCollision called for object: ${obj.name} at offsets x=$offsetX, y=$offsetY"
+            )
 
             if (gameState != GameState.RUNNING) {
                 return
