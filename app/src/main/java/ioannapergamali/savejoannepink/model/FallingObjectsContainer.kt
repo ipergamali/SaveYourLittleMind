@@ -62,6 +62,10 @@ fun FallingObjectsContainer(
             }
 
             objects.forEachIndexed { index, obj ->
+                if (index >= offsetsX.size || index >= offsetsY.size) {
+                    return@forEachIndexed
+                }
+
                 offsetsY[index] += 3f * density
                 obj.offsetX = offsetsX[index]
                 obj.offsetY = offsetsY[index]
@@ -104,6 +108,10 @@ fun FallingObjectsContainer(
 
     Box(modifier = Modifier.fillMaxSize()) {
         objects.forEachIndexed { index, obj ->
+            if (index >= offsetsX.size || index >= offsetsY.size) {
+                return@forEachIndexed
+            }
+
             Box(
                 modifier = Modifier.offset(
                     x = (offsetsX[index] / density).dp,
@@ -141,6 +149,10 @@ private fun resetFallingObjectPosition(
         .filter { it != index && it < objects.size }
         .map { offsetsX[it] to objects[it].getObjectWidth(context).toFloat() }
     val newX = findAvailableX(screenWidth, width, others)
+    if (index >= offsetsX.size || index >= offsetsY.size) {
+        return
+    }
+
     offsetsX[index] = newX
     offsetsY[index] = -height
     obj.offsetX = newX
