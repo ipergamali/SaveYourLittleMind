@@ -13,6 +13,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.bumptech.glide.Glide
 import ioannapergamali.savejoannepink.view.Character
 import kotlinx.coroutines.delay
+import kotlin.math.max
 import kotlin.random.Random
 @Composable
 fun FallingObjectsContainer(
@@ -29,18 +30,48 @@ fun FallingObjectsContainer(
     val offsetsX = remember { objects.map { mutableStateOf(it.offsetX) } }
     val offsetsY = remember { objects.map { mutableStateOf(it.offsetY) } }
 
+    var positionsInitialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(objects.size) {
+        positionsInitialized = false
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
+            if (!positionsInitialized) {
+                val occupied = mutableListOf<Pair<Float, Float>>()
+                objects.filter { !it.collected }.forEachIndexed { index, obj ->
+                    val width = obj.getObjectWidth(context).toFloat()
+                    val initialX = findAvailableX(screenWidth, width, occupied)
+                    offsetsX[index].value = initialX
+                    obj.offsetX = initialX
+                    obj.offsetY = offsetsY[index].value
+                    occupied.add(initialX to width)
+                }
+                positionsInitialized = true
+            }
+
             objects.filter { !it.collected }.forEachIndexed { index, obj ->
-                // Update the vertical position of the object
                 offsetsY[index].value += 3f * density
+
                 if (offsetsY[index].value > screenHeight) {
                     offsetsY[index].value = 0f
-                    offsetsX[index].value = Random.nextFloat() * (screenWidth - obj.getObjectWidth(context) / density)
+                    val width = obj.getObjectWidth(context).toFloat()
+                    val others = offsetsX.indices
+                        .filter { it != index && it < objects.size }
+                        .map { offsetsX[it].value to objects[it].getObjectWidth(context).toFloat() }
+                    val newX = findAvailableX(screenWidth, width, others)
+                    offsetsX[index].value = newX
                 }
-                // Check for collision with the character
+
+                obj.offsetX = offsetsX[index].value
+                obj.offsetY = offsetsY[index].value
+
                 if (checkCollision(context, character, obj, offsetsX[index].value, offsetsY[index].value)) {
-                    Log.d("Collision", "Collision detected with object: ${obj.name} at (${offsetsX[index].value}, ${offsetsY[index].value})")
+                    Log.d(
+                        "Collision",
+                        "Collision detected with object: ${obj.name} at (${offsetsX[index].value}, ${offsetsY[index].value})"
+                    )
                     onCollision(obj, offsetsX[index].value, offsetsY[index].value)
                 }
             }
@@ -105,4 +136,45 @@ fun initializeFallingObject(obj: FallingObject, initialX: Float, initialY: Float
     obj.offsetX = initialX
     obj.offsetY = initialY
     Log.d("FallingObject", "Initialized at X: $initialX, Y: $initialY")
+}
+
+private fun findAvailableX(
+    screenWidth: Int,
+    objectWidth: Float,
+    occupied: List<Pair<Float, Float>>
+): Float {
+    val maxX = (screenWidth - objectWidth).coerceAtLeast(0f)
+    if (maxX <= 0f) {
+        return 0f
+    }
+
+    repeat(25) {
+        val candidate = Random.nextFloat() * maxX
+        val overlaps = occupied.any { (otherX, otherWidth) ->
+            rangesOverlap(candidate, candidate + objectWidth, otherX, otherX + otherWidth)
+        }
+        if (!overlaps) {
+            return candidate
+        }
+    }
+
+    val sorted = occupied.sortedBy { it.first }
+    var cursor = 0f
+    sorted.forEach { (otherX, otherWidth) ->
+        if (otherX - cursor >= objectWidth) {
+            return cursor.coerceAtMost(maxX)
+        }
+        cursor = max(cursor, otherX + otherWidth)
+    }
+
+    return cursor.coerceAtMost(maxX)
+}
+
+private fun rangesOverlap(
+    leftA: Float,
+    rightA: Float,
+    leftB: Float,
+    rightB: Float
+): Boolean {
+    return leftA < rightB && rightA > leftB
 }
